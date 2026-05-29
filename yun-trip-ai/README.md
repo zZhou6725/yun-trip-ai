@@ -35,6 +35,18 @@
 
 ---
 
+## 📸 项目展示
+
+| 登录 | 规划 | 行程生成 |
+| :---: | :---: | :---: |
+| ![登录](./assets/showcase/01登录界面.jpeg) | ![规划](./assets/showcase/02规划界面.jpeg) | ![行程生成](./assets/showcase/03行程生成界面.jpeg) |
+
+| 保存 | PDF 导出 | Markdown 导出 |
+| :---: | :---: | :---: |
+| ![保存](./assets/showcase/04保存界面.jpeg) | ![PDF](./assets/showcase/05保存为pdf.jpeg) | ![Markdown](./assets/showcase/06保存为markdown.jpeg) |
+
+---
+
 ## 🏗️ 技术架构
 
 ### 技术栈
