@@ -1,6 +1,6 @@
 # Frontend 开发说明
 
-当前 `frontend/` 是 TripPlannerDemo 的前端项目，使用 `Vue 3 + TypeScript + Vite + Ant Design Vue + Axios`。它已经不再只是骨架页，而是可以和后端完成生成、保存、历史、地图、天气、编辑和导出的完整联调。
+当前 `frontend/` 是 TripPlanner 的前端项目，使用 `Vue 3 + TypeScript + Vite + Ant Design Vue + Axios`。它已经不再只是骨架页，而是可以和后端完成生成、保存、历史、地图、天气、编辑和导出的完整联调。
 
 ## 1. 当前能力
 
