@@ -1,4 +1,3 @@
-
 # 🗺️ 云途 AI 行程规划
 
 > 融合大模型、RAG、本地攻略与高德地图能力的智能旅行规划系统
@@ -9,6 +8,8 @@
 
 ## 📝 最近更新
 
+- `2026-06-05`
+  - 🐳 **Docker 全栈部署**：Docker Compose 一键编排 Redis + FastAPI + Nginx，支持健康检查、日志轮转、资源限制、Redis 密码认证
 - `2026-05-28`
   - 🎯 **RAG 架构升级**：新增 Milvus Lite 向量库支持，通过 `VECTOR_STORE` 切换 Chroma/Milvus；实现稠密+稀疏混合检索，融合向量相似度与关键词打分。
   - 🛡️ **LLM 稳定性增强**：新增 `JsonOutputParser` 结构化输出约束；指数退避重试（含 jitter）；LLM/Redis/Amap 熔断器保护。
@@ -58,6 +59,7 @@
 - **鉴权**：JWT (python-jose) + bcrypt
 - **前端**：Vue 3 + Vite + Ant Design Vue 4
 - **数据库**：SQLite
+- **容器化**：Docker Compose 全栈编排（Redis + FastAPI + Nginx）
 
 ### 核心架构分层
 
@@ -74,6 +76,43 @@
 ---
 
 ## 🚀 快速启动
+
+### Docker Compose（推荐，一键部署）
+
+```bash
+cd yun-trip-ai
+
+# 1. 配置环境变量
+cp backend/.env.example backend/.env      # 编辑填写 LLM_API_KEY、AMAP_API_KEY 等
+cp frontend/.env.example frontend/.env    # 编辑填写 VITE_AMAP_JS_KEY
+
+# 2. 初始化 RAG 数据
+cd backend
+pip install -r requirements.txt
+python scripts/ingest_data.py
+cd ..
+
+# 3. 启动全部服务
+docker compose up -d --build
+```
+
+启动后访问 `http://localhost`，Nginx 会自动代理后端 API 和前端页面。
+
+| 服务 | 端口 | 说明 |
+| :--- | :--- | :--- |
+| 前端 (Nginx) | 80 | Vue SPA + API 反向代理 |
+| 后端 (FastAPI) | 8000 | AI 行程规划接口 |
+| Redis | 6379 | 缓存服务（密码认证） |
+
+常用命令：
+
+```bash
+docker compose down          # 停止
+docker compose logs -f       # 查看日志
+docker compose up -d --build # 重新构建
+```
+
+### 手动启动（开发调试）
 
 ### 1. 启动 Redis（可选）
 
@@ -222,6 +261,24 @@ curl -X DELETE http://127.0.0.1:8000/trip/trip_大理_2026-06-01 -H "Authorizati
 
 ## 🛠️ 常见问题
 
+### Docker 部署
+
+**容器重启/启动失败**
+- `docker compose logs backend` 查看后端日志
+- 检查 `yun-trip-ai/.env` 中的 `REDIS_PASSWORD` 是否与 `backend/.env` 一致
+- `Permission denied` 通常是 volume 权限问题，重建镜像即可：`docker compose up -d --build`
+
+**前端地图不显示**
+- `VITE_AMAP_JS_KEY` 是否在 `frontend/.env` 中配置（需 JS API key，非 Web 服务 key）
+- Docker 构建时 `.env` 已在构建上下文中，修改后需 `--build` 重建
+- 后端 `ENABLE_AMAP_ENRICHMENT` 是否为 `true`
+
+**API 返回 401**
+- Nginx 已将 `/api/*` 代理到后端，前端 `.env` 中 `VITE_API_BASE_URL` 应留空
+- 首次使用需先注册账号
+
+### 手动启动
+
 ### 前端生成失败
 - 后端是否启动在正确端口
 - `frontend/.env` 的 `VITE_API_BASE_URL` 是否正确
@@ -247,4 +304,4 @@ VECTOR_STORE=chroma   # 或 milvus
 - ✅ **RAG**：Chroma/Milvus 双后端 + 混合检索 + Query Rewrite + Rerank
 - ✅ **缓存**：分级 TTL + Null 值防穿透 + 熔断保护
 - ✅ **前端**：登录/注册、规划页、结果页（地图/天气/预算）、历史管理
-- ✅ **工程化**：日志轮转、Docker 支持、全链路 token 统计
+- ✅ **工程化**：Docker Compose 一键部署、日志轮转、健康检查、全链路 token 统计
