@@ -1,0 +1,139 @@
+# =============================================================================
+# 云途 AI 行程规划 - Docker Compose 全栈编排
+# =============================================================================
+# 包含以下服务：
+#   1. redis      - 缓存服务（Redis 7，密码认证）
+#   2. backend    - FastAPI 后端服务
+#   3. frontend   - Nginx + Vue 前端（SPA）
+#
+# 启动：docker compose up -d
+# 停止：docker compose down
+# 日志：docker compose logs -f
+# 重建：docker compose up -d --build
+# =============================================================================
+
+services:
+  # -------------------- Redis 缓存服务 --------------------
+  redis:
+    image: redis:7-alpine
+    container_name: yun-trip-ai-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - yun-trip-ai-net
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # -------------------- FastAPI 后端服务 --------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: yun-trip-ai-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+    volumes:
+      - backend_data:/app/db
+      - backend_logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - yun-trip-ai-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    stop_grace_period: 30s
+    init: true
+
+  # -------------------- Nginx + Vue 前端 --------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: yun-trip-ai-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - yun-trip-ai-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/"]
+      interval: 15s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# -------------------- 命名数据卷 --------------------
+volumes:
+  redis_data:
+    name: yun-trip-ai-redis-data
+  backend_data:
+    name: yun-trip-ai-backend-data
+  backend_logs:
+    name: yun-trip-ai-backend-logs
+
+# -------------------- 自定义网络 --------------------
+networks:
+  yun-trip-ai-net:
+    name: yun-trip-ai-net
+    driver: bridge
